@@ -432,7 +432,7 @@ function TranslatePage() {
 export default TranslatePage;*/
 
 // at the top
-import React, { useState, useEffect } from 'react';
+/*import React, { useState, useEffect } from 'react';
 import './TranslatePage.css';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import Spline from '@splinetool/react-spline';
@@ -529,8 +529,8 @@ const handleClearHistory = () => {
 
       <h6 className="disclaimer">This model can make mistakes. Check important info.</h6>
 
-      {/* Modal Drawer */}
-      {showHistory && (
+      {/* Modal Drawer */
+    /*  {showHistory && (
         <div className="modal-overlay" onClick={() => setShowHistory(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="close-btn" onClick={() => setShowHistory(false)}>✕</button>
@@ -556,5 +556,143 @@ const handleClearHistory = () => {
     </div>
   );
 }
+export default TranslatePage; */
 
-export default TranslatePage; 
+import React, { useState, useEffect } from 'react';
+import './TranslatePage.css';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import Spline from '@splinetool/react-spline';
+
+function TranslatePage() {
+  const [input, setInput] = useState('');
+  const [output, setOutput] = useState('');
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/translations?method=text');
+        const data = await res.json();
+        setHistory(data);
+      } catch (error) {
+        console.error('Failed to fetch history:', error);
+      }
+    };
+
+    fetchHistory();
+  }, []);
+
+  const handleTranslate = async () => {
+    try {
+      const userId = localStorage.getItem('userId'); 
+      const response = await fetch('http://localhost:5000/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: input,
+          use_pretrained: true,
+          userId: userId
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setOutput(data.translated_text);
+        setHistory(prev => [
+          { sourceText: input, translatedText: data.translated_text },
+          ...prev,
+        ]);
+      } else {
+        setOutput('Error: Could not translate.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setOutput('Error: Could not connect to the server.');
+    }
+  };
+
+  const handleClearHistory = async () => {
+    try {
+      await fetch('http://localhost:5000/translations?method=text', {
+        method: 'DELETE',
+      });
+      setHistory([]);
+    } catch (error) {
+      console.error('Failed to clear history:', error);
+    }
+  };
+
+  return (
+    <div className="translate-container">
+      <div className="heading-with-globe">
+        <div className='globe-lottie'>
+          <DotLottieReact
+            src="https://lottie.host/30b14efa-e2ca-4281-821b-21ce56f1224d/JWjSqO9Foo.lottie"
+            loop
+            autoplay
+          />
+        </div>
+        <h1>Translator</h1>
+      </div>
+
+      <div className='mm_cont'>
+        <div className="translator-grid">
+          <div className="left-center-spline">
+            <Spline scene="https://prod.spline.design/HMApVhVaFRu2OqCI/scene.splinecode" />
+          </div>
+          <div className="translator-box">
+            <select><option>English</option></select>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder='Enter text to translate...'
+            />
+          </div>
+          <div className="translator-box">
+            <select><option>Telugu</option></select>
+            <textarea
+              value={output}
+              readOnly
+              placeholder='Translation will appear here...'
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="btn-row">
+        <button className="translate-btn" onClick={handleTranslate}>Translate</button>
+        <button className="history-btn" onClick={() => setShowHistory(true)}>History</button>
+      </div>
+
+      <h6 className="disclaimer">This model can make mistakes. Check important info.</h6>
+
+      {/* History Modal */}
+      {showHistory && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="close-btn" onClick={() => setShowHistory(false)}>×</button>
+            <h3>Translation History</h3>
+            {history.length === 0 ? (
+              <p>No translations yet.</p>
+            ) : (
+              <ul className="history-list">
+                {history.map((item, index) => (
+                  <li key={index}>
+                    <strong>Input:</strong> {item.sourceText}<br />
+                    <strong>Output:</strong> {item.translatedText}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {history.length > 0 && (
+              <button className="clear-btn" onClick={handleClearHistory}>Clear History</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default TranslatePage;
